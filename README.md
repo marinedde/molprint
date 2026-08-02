@@ -12,7 +12,7 @@ Objectif : couvrir les compétences bioinformatique/chémoinformatique/biologie 
 | --- | --- | --- | --- |
 | 1 | Séquences ARN/ADN | Biopython | **terminée** |
 | 2 | Chémoinformatique (screening in silico, QSAR) | RDKit, PubChem BioAssay, XGBoost | **terminée** |
-| 3 | Biologie des systèmes (modèle ODE d'une voie de signalisation) | Tellurium / PySB | à venir |
+| 3 | Biologie des systèmes (modèle ODE d'une voie de signalisation) | Tellurium | **terminée** |
 | 4 | Base de données interne (patientes ↔ gènes ↔ molécules ↔ voies) | SQLite | à venir |
 | 5 | Assemblage (dashboard Streamlit) + veille bibliographique | Streamlit, HuggingFace Spaces | **dashboard en ligne** |
 
@@ -25,6 +25,18 @@ Cible thérapeutique : **HER2/ERBB2** (choisie car elle relie directement au sou
 3. `notebooks/03_virtual_screening_optimization.ipynb` — criblage virtuel et optimisation in silico : validation du modèle sur 5 médicaments anti-HER2 approuvés (probabilité prédite cohérente avec leur statut d'inhibiteurs connus), génération de nouveaux candidats par recombinaison de fragments (BRICS) à partir des molécules les plus actives, filtre de diversité structurale (clustering Butina sur empreintes de Morgan) et sélection d'un top 15
 4. `notebooks/04_fingerprint_qsar.ipynb` — comparaison en validation croisée de trois représentations moléculaires (descripteurs seuls, empreintes de Morgan seules, combinaison des deux) ; le modèle combiné (ROC AUC 0,98) devient le modèle final, nettement plus fiable sur les médicaments de référence que le modèle à descripteurs seuls
 5. `notebooks/06_scaffold_validation_applicability_domain.ipynb` — **rigueur méthodologique** : le split aléatoire (ROC AUC 0,98) est optimiste car le jeu de données contient beaucoup d'analogues proches (499 squelettes chimiques pour 1070 molécules). Un split par squelette de Bemis-Murcko (méthode standard du domaine, type MoleculeNet) donne un ROC AUC honnête de 0,91 sur des squelettes jamais vus (rappel actif 0,59) — et un contrôle de domaine d'applicabilité (similarité de Tanimoto au train) montre que les candidats générés en notebook 03 restent dans une zone "modérément nouvelle", donc leurs scores sont des pistes à explorer plutôt que des prédictions fiables
+
+## Phase 3 — Biologie des systèmes
+
+Voie de signalisation **HER2 → PI3K → AKT** (le cœur de la prolifération dans le sous-type "HER2-enrichi"), modélisée par équations différentielles ordinaires (ODE) avec Tellurium — cascade de kinases à 3 étages, chaque protéine passant d'un état inactif à actif.
+
+`notebooks/07_systems_biology_her2_pathway.ipynb` :
+- Simulation de la cascade sans traitement, puis avec blocage de HER2 (type lapatinib) — le signal s'éteint sur les trois étages
+- **Mécanisme de résistance** : une mutation activatrice de *PIK3CA* (mécanisme de résistance au trastuzumab documenté cliniquement) maintient PI3K actif indépendamment de HER2 — même avec HER2 bloqué à 95%, AKT reste presque aussi actif que sans traitement
+- Simulateur générique pour choisir le point de blocage (HER2, PI3K ou AKT) et comparer au signal non traité
+- Courbe dose-réponse : intensité du blocage de HER2 vs niveau d'AKT actif à l'état stationnaire
+
+Constantes cinétiques illustratives (non fittées sur données expérimentales) — l'objectif est de démontrer la méthode de modélisation, pas de produire un résultat biologique quantitatif validé.
 
 ## Phase 1 — Séquences ARN/ADN
 

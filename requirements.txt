@@ -11,3 +11,4 @@ jupyter
 ipykernel
 biopython
 certifi
+tellurium
