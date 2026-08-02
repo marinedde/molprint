@@ -297,6 +297,28 @@ Sur un hold-out unique, l'écart est spectaculaire : **0,98 → 0,91**, et surto
 
 **La conséquence concrète** : chaque prédiction du dashboard est maintenant accompagnée d'un **domaine d'applicabilité** — la similarité (indice de Tanimoto, une mesure de ressemblance entre empreintes moléculaires, entre 0 et 1) à la molécule la plus proche du jeu d'entraînement. En dessous de 0,35, le dashboard affiche un avertissement explicite.
 
+### "0,98 / 0,91, ce n'est pas trop beau ?" — le test de permutation
+
+Question légitime, et il existe un test précis pour y répondre : entraîner le modèle sur les **mêmes features, mais avec les étiquettes actif/inactif mélangées au hasard**. Si le score restait élevé, ce serait la preuve d'une fuite quelque part (le modèle exploiterait un raccourci indépendant de la vraie relation structure-activité). Si le score s'effondre au niveau du hasard (0,5), c'est que le signal vient bien des features.
+
+```python
+y_shuffled = rng.permutation(y)
+cross_val_score(model, X, y_shuffled, cv=cv, scoring='roc_auc')
+```
+
+| Labels | ROC AUC (5-fold) |
+| --- | --- |
+| Vrais labels | 0,9803 |
+| Labels mélangés (essai 1) | 0,567 |
+| Labels mélangés (essai 2) | 0,504 |
+| Labels mélangés (essai 3) | 0,469 |
+
+Avec des labels mélangés, le score retombe pile au niveau du hasard, sur 3 essais différents. **Pas de fuite au sens strict.**
+
+**Mais alors pourquoi le score est-il vraiment si haut ?** En regardant quel bit d'empreinte pèse le plus dans le modèle (35% de l'importance totale à lui seul), on retrouve le fragment `cc(N)ncn` — le motif **aminopyrimidine/aminoquinazoline**, le point d'ancrage chimique classique de la quasi-totalité des inhibiteurs de kinases ATP-compétitifs (lapatinib, gefitinib, erlotinib, afatinib le portent tous). Il est présent dans **470 des 546 molécules actives (86%)**, contre seulement 25 des 524 inactives (5%).
+
+Ce n'est pas un artefact — c'est de la chimie médicinale réelle et bien documentée. Mais ça révèle une limite honnête : le modèle apprend en bonne partie à reconnaître *"est-ce que ça ressemble à un inhibiteur de kinase en général"*, une tâche plus facile que *"est-ce spécifiquement sélectif pour HER2"* — parce que le jeu de données oppose surtout des molécules type inhibiteur de kinase à des molécules qui n'en sont pas du tout, pas des inhibiteurs de HER2 à des inhibiteurs sélectifs d'autres kinases. Un vrai test de sélectivité demanderait des "leurres" actifs sur d'autres cibles proches (EGFR, autres récepteurs ErbB) comme négatifs — une piste d'amélioration listée en section 12.
+
 ### Le vrai bug trouvé pendant l'audit demandé
 
 En relisant le code pour cet audit (pas de mémoire — relecture ligne par ligne), un vrai problème de cohérence est apparu : le notebook 03 (criblage virtuel) chargeait encore **l'ancien modèle** (`qsar_erbb2_xgboost.pkl`, descripteurs seuls, notebook 02) au lieu du **modèle combiné final** établi comme meilleur dans le notebook 04. Résultat : toute la chaîne en aval (le shortlist de candidats, le domaine d'applicabilité du notebook 06, la table `molecules` de la base Phase 4, et l'onglet "Candidats sélectionnés" du dashboard) héritait du modèle le moins rigoureux.
@@ -610,6 +632,8 @@ molprint/
 | Fuite d'étiquette (la cible dérivée des features, ou vice versa) | ✅ Aucune — `active` vient de PubChem, indépendant des descripteurs RDKit |
 | Cohérence features train ↔ inférence (dashboard, notebooks) | ✅ Vérifiée ligne par ligne |
 | Optimisme du split aléatoire (quasi-doublons structurels) | ⚠️ **Confirmé et quantifié** : ROC AUC 0,98 (aléatoire) → 0,91 (par squelette), rappel actif 0,59 sur chimie inédite |
+| Test de permutation (labels mélangés au hasard) | ✅ Score retombe à ~0,5 sur 3 essais — écarte une fuite structurelle cachée |
+| Concentration du signal sur un seul motif chimique (pharmacophore kinase) | ⚠️ **Confirmé** : le bit d'empreinte le plus important (35% du poids) = motif aminopyrimidine/quinazoline, présent dans 86% des actifs vs 5% des inactifs — le modèle discrimine surtout "type inhibiteur de kinase" vs "non", pas la sélectivité fine pour HER2 |
 | Biais de génération (candidats BRICS dérivés du train) | ⚠️ **Présent par construction**, atténué par le contrôle de domaine d'applicabilité |
 | Cohérence de version du modèle dans le pipeline | 🐛 **Bug trouvé et corrigé** pendant cet audit (notebook 03 utilisait l'ancien modèle) |
 | Hyperparamètres extrêmes (signe classique d'overfitting volontaire) | ✅ Non — profondeur et taux d'apprentissage modestes |
@@ -631,6 +655,7 @@ molprint/
 ### Moyen terme (le prochain axe de développement naturel)
 
 - **Étendre au-delà d'ERBB2** : refaire les Phases 2 et 3 sur une deuxième cible (ex. ESR1, en lien avec le Luminal A et la mutation Y537S déjà trouvée en Phase 1) — la table `molecules` de la base Phase 4 a déjà une colonne `target_gene` prévue pour ça.
+- **Tester la vraie sélectivité, pas juste "ressemble à un inhibiteur de kinase"** (limite identifiée en section 6) : ajouter comme négatifs des molécules actives sur des kinases *proches* (EGFR, ERBB3/4) mais pas sur HER2 — un test bien plus dur et bien plus proche de la vraie question posée en pharma ("sélectif pour cette cible", pas juste "a la bonne famille chimique").
 - **Remplacer la classification GDSC manuelle par une source vérifiée programmatiquement** (Cellosaurus, l'ontologie de référence des lignées cellulaires, avec API interrogeable) pour couvrir les 18 lignées actuellement "Non classé" avec un niveau de confiance documenté plutôt qu'absent.
 - **Publier le dataset ERBB2 nettoyé sur Kaggle** pour la visibilité (déjà évoqué) — n'apporte rien à la rigueur scientifique mais un vrai plus pour la découvrabilité du portfolio.
 - **Ajouter la Phase 3 à la base de données** de façon dynamique (aujourd'hui les résultats d'AKT actif/bloqué sont codés en dur dans le README, pas stockés en base) — un tableau `pathway_simulations` avec les scénarios et leurs résultats serait cohérent avec l'esprit de la Phase 4.

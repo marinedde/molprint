@@ -348,6 +348,18 @@ elif page == "📊 Méthodologie & rigueur":
     )
     st.markdown("Détail complet : `notebooks/06_scaffold_validation_applicability_domain.ipynb`.")
 
+    st.markdown("### \"0,98, ce n'est pas trop beau ?\"")
+    st.markdown(
+        "Test de permutation : réentraîner le modèle avec les labels actif/inactif mélangés "
+        "au hasard fait retomber le ROC AUC à **~0,5** (0,567 / 0,504 / 0,469 sur 3 essais) — "
+        "pas de fuite de données cachée.\n\n"
+        "Mais le bit d'empreinte le plus important (35% du poids du modèle) correspond au motif "
+        "**aminopyrimidine/quinazoline**, le point d'ancrage classique des inhibiteurs de kinases "
+        "— présent dans 86% des actifs contre 5% des inactifs. Le modèle discrimine surtout "
+        "*\"type inhibiteur de kinase\"* vs *\"non\"*, pas finement la sélectivité pour HER2 "
+        "spécifiquement. Détail dans `docs/GUIDE_COMPLET.md`."
+    )
+
 elif page == "ℹ️ À propos":
     st.title("ℹ️ À propos de MolPrint")
     st.markdown(
