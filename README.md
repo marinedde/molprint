@@ -20,6 +20,7 @@ Cible thérapeutique : **HER2/ERBB2** (choisie car elle relie directement au sou
 
 1. `notebooks/01_bioactivity_data_acquisition.ipynb` — récupération des molécules testées sur ERBB2 via l'API PubChem BioAssay (table "bioactivity concise"). ChEMBL était visée initialement mais son API était en panne (erreurs 500) au moment de l'écriture.
 2. `notebooks/02_rdkit_descriptors_qsar.ipynb` — calcul des descripteurs moléculaires (RDKit, règles de Lipinski) et modèle QSAR (XGBoost + SHAP) prédisant l'activité d'une molécule à partir de sa structure
+3. `notebooks/03_virtual_screening_optimization.ipynb` — criblage virtuel et optimisation in silico : validation du modèle sur 5 médicaments anti-HER2 approuvés (probabilité prédite cohérente avec leur statut d'inhibiteurs connus), génération de nouveaux candidats par recombinaison de fragments (BRICS) à partir des molécules les plus actives, filtre de diversité structurale (clustering Butina sur empreintes de Morgan) et sélection d'un top 15
 
 ## Installation
 
