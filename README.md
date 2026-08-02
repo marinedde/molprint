@@ -31,6 +31,11 @@ Cible thérapeutique : **HER2/ERBB2** (choisie car elle relie directement au sou
 5. `notebooks/06_scaffold_validation_applicability_domain.ipynb` — **rigueur méthodologique** : le split aléatoire (ROC AUC 0,98) est optimiste car le jeu de données contient beaucoup d'analogues proches (499 squelettes chimiques pour 1070 molécules). Un split par squelette de Bemis-Murcko (méthode standard du domaine, type MoleculeNet) donne un ROC AUC honnête de 0,91 sur des squelettes jamais vus (rappel actif 0,59) — et un contrôle de domaine d'applicabilité (similarité de Tanimoto au train) montre que les candidats générés en notebook 03 restent dans une zone "modérément nouvelle", donc leurs scores sont des pistes à explorer plutôt que des prédictions fiables
 6. `notebooks/09_exploratory_data_analysis.ipynb` — **EDA a posteriori** : déséquilibre de classe (51%/49%, sain), 0 SMILES invalide, un seul outlier structurel réel (étiqueté inactif), forte multicolinéarité entre descripteurs de taille — et surtout, les molécules actives sont 44% plus lourdes en moyenne que les inactives, ce qui, combiné au test de permutation (labels mélangés → AUC ~0,5, pas de fuite) et à l'analyse du bit d'empreinte dominant (motif kinase, section 6 du guide), montre que le modèle discrimine surtout "type inhibiteur de kinase" plutôt que la sélectivité fine pour HER2
 
+**Rigueur d'ingénierie des données**, ajoutée en plus de la rigueur ML ci-dessus (`src/data_quality.py`, [`docs/audit_trail.md`](docs/audit_trail.md)) :
+- **Couche brute préservée** : `notebooks/01_bioactivity_data_acquisition.ipynb` sauvegarde la réponse API telle quelle (`data/raw/bronze/`) avant toute transformation — rejouable si un bug de nettoyage est découvert plus tard
+- **Contrôles qualité automatiques qui alertent, pas qui corrigent en silence** : avant de sauvegarder le fichier final, vérification automatique (pas de doublon, pas de SMILES invalide, classes pas trop déséquilibrées...) — toute violation lève une erreur explicite et arrête le notebook
+- **Piste d'audit** : chaque décision de traitement de données (bugs corrigés, exclusions, seuils choisis) loggée avec son raisonnement et son impact mesuré dans `docs/audit_trail.md`
+
 ## Phase 4 — Base de données interne
 
 Relie dans une seule base SQLite (`data/processed/molprint.db`) les briques construites séparément : gènes (Phase 1), molécules candidates (Phase 2), voie de signalisation (Phase 3), et une source externe indépendante — **GDSC** (Genomics of Drug Sensitivity in Cancer, Sanger Institute), qui mesure la sensibilité réelle en laboratoire de 51 lignées cellulaires de cancer du sein à des centaines de médicaments.
@@ -81,5 +86,6 @@ molprint/
 ├── models/            # modèles entraînés (non versionnés)
 └── docs/
     ├── GUIDE_COMPLET.md   # guide pédagogique complet + audit technique
+    ├── audit_trail.md     # registre des décisions de données/modélisation
     └── veille/            # fiches de veille bibliographique, une par phase
 ```

@@ -326,6 +326,15 @@ resp = requests.get(f"{PUG_REST}/gene/geneid/{gene_id}/concise/JSON", timeout=60
 
 **Résultat** : **1070 molécules uniques**, à peu près équilibrées (546 actives / 524 inactives) — un jeu de données sain, sans déséquilibre extrême qui biaiserait le modèle.
 
+**Deux garde-fous ajoutés après coup** (voir [`docs/audit_trail.md`](../docs/audit_trail.md) pour le détail complet des décisions de ce type) :
+
+1. **Couche brute préservée** : la réponse de l'API est sauvegardée telle quelle (`data/raw/bronze/erbb2_bioactivity_raw.csv`) *avant* le moindre nettoyage. Analogie : ne jamais jeter la matière première tant qu'on n'est pas sûr d'avoir bien compris la recette — si un bug de nettoyage est découvert plus tard (comme celui du notebook 02 juste en dessous), on peut tout rejouer depuis cette version brute sans refaire l'appel réseau.
+2. **Contrôle qualité automatique, qui alerte plutôt que corrige en silence** (`src/data_quality.py`) : juste avant de sauvegarder le fichier final, une fonction vérifie automatiquement l'absence de doublons, de SMILES invalides, et un déséquilibre de classe raisonnable — et **arrête le notebook avec une erreur explicite** si une règle est violée, plutôt que de laisser passer un fichier douteux :
+```python
+stats = check_erbb2_activities(final)  # lève DataQualityError si un contrôle échoue
+```
+Testé dans les deux sens : ça passe sur les vraies données, et ça détecte bien un jeu de données volontairement cassé (déséquilibre à 100%) lors d'un test de validation du module lui-même.
+
 ### Notebook 02 — Premier modèle : les descripteurs moléculaires
 
 **Fichier** : [`notebooks/02_rdkit_descriptors_qsar.ipynb`](../notebooks/02_rdkit_descriptors_qsar.ipynb)
@@ -811,6 +820,9 @@ molprint/
 | Cohérence de version du modèle dans le pipeline | 🐛 **Bug trouvé et corrigé** pendant cet audit (notebook 03 utilisait l'ancien modèle) |
 | Hyperparamètres extrêmes (signe classique d'overfitting volontaire) | ✅ Non — profondeur et taux d'apprentissage modestes |
 | Écart-type de la validation croisée | ✅ Faible (0,007–0,009) — le modèle est stable d'un pli à l'autre |
+| Couche brute préservée avant transformation | ✅ Ajouté — `data/raw/bronze/`, rejouable si un bug de nettoyage est découvert plus tard |
+| Contrôles qualité automatiques (alerter, pas corriger en silence) | ✅ Ajouté — `src/data_quality.py`, teste doublons/SMILES invalides/déséquilibre de classe, arrête le notebook si violation |
+| Piste d'audit des décisions et exclusions | ✅ Ajouté — [`docs/audit_trail.md`](../docs/audit_trail.md), une entrée par décision avec raisonnement et impact mesuré |
 
 **Verdict global** : pas de data leakage au sens strict (aucune information du test n'a jamais été utilisée pour entraîner le modèle). Le vrai risque identifié — l'optimisme du split aléatoire en présence d'analogues chimiques proches — est un phénomène connu du domaine QSAR, **déjà activement mesuré et corrigé méthodologiquement** dans ce projet (notebook 06), pas laissé sous le tapis. Le bug de cohérence de version, lui, est un vrai problème d'ingénierie (pas de ML) — trouvé et corrigé pendant cet audit.
 
