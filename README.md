@@ -9,7 +9,7 @@ Objectif : couvrir les compétences bioinformatique/chémoinformatique/biologie 
 | Phase | Sujet | Outils | Statut |
 | --- | --- | --- | --- |
 | 1 | Séquences ARN/ADN | Biopython | à venir |
-| 2 | Chémoinformatique (screening in silico, QSAR) | RDKit, PubChem BioAssay, XGBoost | **en cours** |
+| 2 | Chémoinformatique (screening in silico, QSAR) | RDKit, PubChem BioAssay, XGBoost | **terminée** |
 | 3 | Biologie des systèmes (modèle ODE d'une voie de signalisation) | Tellurium / PySB | à venir |
 | 4 | Base de données interne (patientes ↔ gènes ↔ molécules ↔ voies) | SQLite | à venir |
 | 5 | Assemblage (dashboard Streamlit) + veille bibliographique | - | à venir |
@@ -21,6 +21,7 @@ Cible thérapeutique : **HER2/ERBB2** (choisie car elle relie directement au sou
 1. `notebooks/01_bioactivity_data_acquisition.ipynb` — récupération des molécules testées sur ERBB2 via l'API PubChem BioAssay (table "bioactivity concise"). ChEMBL était visée initialement mais son API était en panne (erreurs 500) au moment de l'écriture.
 2. `notebooks/02_rdkit_descriptors_qsar.ipynb` — calcul des descripteurs moléculaires (RDKit, règles de Lipinski) et modèle QSAR (XGBoost + SHAP) prédisant l'activité d'une molécule à partir de sa structure
 3. `notebooks/03_virtual_screening_optimization.ipynb` — criblage virtuel et optimisation in silico : validation du modèle sur 5 médicaments anti-HER2 approuvés (probabilité prédite cohérente avec leur statut d'inhibiteurs connus), génération de nouveaux candidats par recombinaison de fragments (BRICS) à partir des molécules les plus actives, filtre de diversité structurale (clustering Butina sur empreintes de Morgan) et sélection d'un top 15
+4. `notebooks/04_fingerprint_qsar.ipynb` — comparaison en validation croisée de trois représentations moléculaires (descripteurs seuls, empreintes de Morgan seules, combinaison des deux) ; le modèle combiné (ROC AUC 0,98) devient le modèle final, nettement plus fiable sur les médicaments de référence que le modèle à descripteurs seuls
 
 ## Installation
 
