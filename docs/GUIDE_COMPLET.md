@@ -226,6 +226,18 @@ Résultat : **3000 nouvelles molécules générées** (jamais vues dans le jeu d
 
 Le modèle combiné gagne, et devient le **modèle final** utilisé partout en aval (dashboard, base de données). Sur le jeu de test isolé, il obtient un ROC AUC de 0,9812.
 
+### L'EDA qui aurait dû venir avant tout ça
+
+**Fichier** : [`notebooks/09_exploratory_data_analysis.ipynb`](../notebooks/09_exploratory_data_analysis.ipynb) — ajouté après coup, suite à la question directe *"as-tu fait une EDA, il y a un déséquilibre de classe, des outliers ?"*. Réponse honnête : pas de façon systématique avant d'entraîner le premier modèle. Ce notebook comble le manque :
+
+- **Déséquilibre de classe** : 51% actif / 49% inactif — sain, pas besoin de rééquilibrage.
+- **SMILES invalides** : 0 sur 1070 (normal, ils viennent d'une API qui les valide déjà).
+- **Outliers** : globalement peu nombreux, sauf une molécule unique très atypique (CID 136027061 : 14 donneurs H, TPSA 355 quand le reste du jeu plafonne à ~165) — rassurant, elle est étiquetée *inactive*, elle ne gonfle donc pas artificiellement la classe active.
+- **Multicolinéarité** : `molecular_weight`, `heavy_atoms` et `molar_refractivity` sont corrélés à plus de 0,97 entre eux — attendu physiquement, sans conséquence pour XGBoost (contrairement à une régression linéaire) mais ça réduit le nombre de signaux réellement indépendants parmi les 10 descripteurs.
+- **Le résultat le plus important** : **les molécules actives sont en moyenne 44% plus lourdes que les inactives** (533,5 vs 370,5 g/mol), avec plus d'atomes lourds, plus de cycles, un LogP plus élevé. Un écart massif, pas du bruit.
+
+**Pourquoi c'est important** : ça complète directement le constat du bit d'empreinte dominant (section 6, motif aminopyrimidine/quinazoline) — une partie de la performance du modèle vient probablement de sa capacité à reconnaître des molécules *grosses et complexes de type inhibiteur de kinase*, pas uniquement une reconnaissance fine et sélective de HER2. Le test de permutation (section 6) confirme qu'il n'y a pas de fuite de données — mais cette EDA a posteriori montre bien *pourquoi* la tâche était plus facile qu'elle n'en avait l'air au premier abord.
+
 ---
 
 ## 5. Le Machine Learning en détail — et pourquoi XGBoost
@@ -627,6 +639,8 @@ molprint/
 
 | Vérification | Résultat |
 | --- | --- |
+| Déséquilibre de classe | ✅ Sain (51%/49%) — vérifié en EDA a posteriori (notebook 09) |
+| Outliers / erreurs de données | ✅ Un seul outlier structurel réel trouvé, étiqueté inactif (sans effet sur la classe active) |
 | Doublons exacts de SMILES entre train/test | ✅ Aucun trouvé |
 | Fuite via feature engineering (stats calculées avant split) | ✅ Aucune — chaque molécule est featurizée indépendamment |
 | Fuite d'étiquette (la cible dérivée des features, ou vice versa) | ✅ Aucune — `active` vient de PubChem, indépendant des descripteurs RDKit |
@@ -634,6 +648,7 @@ molprint/
 | Optimisme du split aléatoire (quasi-doublons structurels) | ⚠️ **Confirmé et quantifié** : ROC AUC 0,98 (aléatoire) → 0,91 (par squelette), rappel actif 0,59 sur chimie inédite |
 | Test de permutation (labels mélangés au hasard) | ✅ Score retombe à ~0,5 sur 3 essais — écarte une fuite structurelle cachée |
 | Concentration du signal sur un seul motif chimique (pharmacophore kinase) | ⚠️ **Confirmé** : le bit d'empreinte le plus important (35% du poids) = motif aminopyrimidine/quinazoline, présent dans 86% des actifs vs 5% des inactifs — le modèle discrimine surtout "type inhibiteur de kinase" vs "non", pas la sélectivité fine pour HER2 |
+| Écart de taille moléculaire actifs vs inactifs | ⚠️ **Confirmé** : actifs 44% plus lourds en moyenne (533 vs 370 g/mol) — renforce le constat ci-dessus, tâche probablement plus facile que la sélectivité pure |
 | Biais de génération (candidats BRICS dérivés du train) | ⚠️ **Présent par construction**, atténué par le contrôle de domaine d'applicabilité |
 | Cohérence de version du modèle dans le pipeline | 🐛 **Bug trouvé et corrigé** pendant cet audit (notebook 03 utilisait l'ancien modèle) |
 | Hyperparamètres extrêmes (signe classique d'overfitting volontaire) | ✅ Non — profondeur et taux d'apprentissage modestes |

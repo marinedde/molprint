@@ -4,3 +4,4 @@ numpy
 rdkit
 xgboost
 joblib
+matplotlib
