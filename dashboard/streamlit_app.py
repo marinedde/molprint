@@ -1,6 +1,8 @@
 import io
+import sqlite3
 
 import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -40,6 +42,11 @@ def load_shortlist():
 @st.cache_data
 def load_gene_table():
     return pd.read_csv("data/gene_sequence_analysis.csv")
+
+
+@st.cache_resource
+def get_db_connection():
+    return sqlite3.connect("data/molprint.db", check_same_thread=False)
 
 
 def compute_descriptors(mol):
@@ -98,6 +105,7 @@ PAGES = [
     "🧪 Cribler une molécule",
     "🎯 Candidats sélectionnés",
     "🧬 Séquences géniques",
+    "🗄️ Base de données",
     "📊 Méthodologie & rigueur",
     "ℹ️ À propos",
 ]
@@ -227,6 +235,95 @@ elif page == "🧬 Séquences géniques":
         "Détail dans `notebooks/05_gene_sequence_analysis.ipynb`."
     )
 
+elif page == "🗄️ Base de données":
+    st.title("🗄️ Base de données interne (Phase 4)")
+    st.markdown(
+        "Relie gènes (Phase 1), molécules candidates (Phase 2), voie de signalisation (Phase 3) "
+        "et sous-types moléculaires — enrichie par **GDSC** (Sanger), des données réelles de "
+        "sensibilité de 51 lignées cellulaires de cancer du sein à des thérapies ciblées. "
+        "Voir `notebooks/08_internal_database.ipynb`."
+    )
+    conn = get_db_connection()
+
+    st.markdown("### Explorer par sous-type")
+    subtype_choice = st.selectbox("Sous-type moléculaire", ["Luminal A", "HER2-enrichi", "Triple Negatif"])
+
+    key_genes_df = pd.read_sql(
+        "SELECT key_gene, shap_rank FROM subtypes WHERE subtype = ? ORDER BY shap_rank",
+        conn, params=(subtype_choice,),
+    )
+    key_genes = key_genes_df["key_gene"].tolist()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Gènes clés (SHAP OncoPrint)**")
+        st.dataframe(
+            key_genes_df.rename(columns={"key_gene": "Gène", "shap_rank": "Rang SHAP"}),
+            use_container_width=True, hide_index=True,
+        )
+    with col2:
+        n_lines = pd.read_sql(
+            "SELECT COUNT(*) as n FROM cell_lines WHERE subtype = ?", conn, params=(subtype_choice,)
+        )["n"][0]
+        st.metric("Lignées cellulaires GDSC de ce sous-type", n_lines)
+
+    if "ERBB2" in key_genes:
+        st.markdown("**Molécules candidates ciblant ERBB2** (Phase 2)")
+        mol_q = pd.read_sql(
+            "SELECT canonical_smiles, activity_probability, applicability_domain "
+            "FROM molecules WHERE target_gene = 'ERBB2' ORDER BY activity_probability DESC LIMIT 5",
+            conn,
+        )
+        st.dataframe(mol_q, use_container_width=True, hide_index=True)
+        st.markdown("**Voie de signalisation modélisée (Phase 3)** : HER2 → PI3K → AKT")
+    else:
+        st.info(
+            "Aucune molécule candidate ni voie modélisée pour ce sous-type dans MolPrint pour "
+            "l'instant — seul ERBB2/HER2 a été couvert en Phase 2/3."
+        )
+
+    st.markdown("### Validation empirique GDSC : sensibilité au lapatinib par sous-type")
+    lap_df = pd.read_sql(
+        '''
+        SELECT c.subtype, r.LN_IC50
+        FROM drug_response r
+        JOIN cell_lines c ON r.COSMIC_ID = c.COSMIC_ID
+        WHERE r.DRUG_NAME = 'Lapatinib' AND c.subtype != 'Non classé'
+        ''',
+        conn,
+    )
+    fig, ax = plt.subplots(figsize=(6, 3.5))
+    lap_df.boxplot(column="LN_IC50", by="subtype", ax=ax)
+    ax.set_ylabel("ln(IC50) — plus bas = plus sensible")
+    ax.set_title("")
+    plt.suptitle("")
+    st.pyplot(fig)
+    st.caption("Données réelles de laboratoire (GDSC/Sanger) — indépendantes de nos propres modèles.")
+
+    st.markdown("### Requêter la base toi-même (SQL)")
+    st.caption("Lecture seule — uniquement des requêtes SELECT.")
+    example_queries = {
+        "Tables disponibles": "SELECT name FROM sqlite_master WHERE type='table'",
+        "Tous les gènes": "SELECT * FROM genes",
+        "Médicaments testés sur les lignées HER2-enrichi (triés par efficacité)": (
+            "SELECT r.DRUG_NAME, AVG(r.LN_IC50) as ic50_moyen, COUNT(*) as n "
+            "FROM drug_response r JOIN cell_lines c ON r.COSMIC_ID = c.COSMIC_ID "
+            "WHERE c.subtype = 'HER2-enrichi' GROUP BY r.DRUG_NAME ORDER BY ic50_moyen"
+        ),
+    }
+    choice_q = st.selectbox("Exemple de requête (optionnel)", ["—"] + list(example_queries.keys()))
+    default_query = example_queries.get(choice_q, "SELECT * FROM genes LIMIT 5")
+    query = st.text_area("Requête SQL", value=default_query, height=100)
+
+    if st.button("Exécuter"):
+        if not query.strip().lower().startswith("select"):
+            st.error("Seules les requêtes SELECT sont autorisées.")
+        else:
+            try:
+                st.dataframe(pd.read_sql(query, conn), use_container_width=True)
+            except Exception as e:
+                st.error(f"Erreur SQL : {e}")
+
 elif page == "📊 Méthodologie & rigueur":
     st.title("📊 Méthodologie & rigueur")
     st.markdown(
@@ -267,7 +364,7 @@ Data Scientist Préclinique en R&D pharmaceutique.
 **Roadmap** :
 - ✅ Phase 1 — Séquences ARN/ADN (Biopython)
 - ✅ Phase 2 — Chémoinformatique (RDKit, QSAR, criblage virtuel, validation par squelette)
-- 🔜 Phase 3 — Biologie des systèmes (modèle ODE d'une voie de signalisation)
-- 🔜 Phase 4 — Base de données interne
+- ✅ Phase 3 — Biologie des systèmes (modèle ODE HER2/PI3K/AKT, Tellurium)
+- ✅ Phase 4 — Base de données interne (SQLite + GDSC)
         """
     )
