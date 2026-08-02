@@ -2,6 +2,8 @@
 
 **[🧪 Dashboard live](https://huggingface.co/spaces/marinedde/molprint-dashboard)** — cribler une molécule, explorer les candidats sélectionnés, voir les gènes analysés et la validation méthodologique.
 
+**[📖 Guide complet](docs/GUIDE_COMPLET.md)** — tout le projet expliqué pas à pas (analogies, code, résultats, SQL/Python/ML pour les nuls), plus un audit technique/architecture complet et une vérification data leakage/overfitting.
+
 Projet in silico de prédiction de réponse aux médicaments, construit en complément d'[OncoPrint](https://github.com/marinedde/cdsd-certification/tree/main/bloc6-direction-projet/oncoprint) (classification moléculaire des sous-types de cancer du sein, TCGA-BRCA, XGBoost + SHAP).
 
 Objectif : couvrir les compétences bioinformatique/chémoinformatique/biologie des systèmes demandées sur les postes Data Scientist Préclinique en R&D pharmaceutique (cible marché : Suisse, Bâle).
