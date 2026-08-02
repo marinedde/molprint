@@ -1,5 +1,7 @@
 # MolPrint
 
+🇫🇷 Français | [🇬🇧 English](README.en.md)
+
 **[🧪 Dashboard live](https://huggingface.co/spaces/marinedde/molprint-dashboard)** — cribler une molécule, explorer les candidats sélectionnés, voir les gènes analysés et la validation méthodologique.
 
 **[📖 Guide complet](docs/GUIDE_COMPLET.md)** — tout le projet expliqué pas à pas (analogies, code, résultats, SQL/Python/ML pour les nuls), plus un audit technique/architecture complet et une vérification data leakage/overfitting.
@@ -16,7 +18,7 @@ Objectif : couvrir les compétences bioinformatique/chémoinformatique/biologie 
 | 2 | Chémoinformatique (screening in silico, QSAR) | RDKit, PubChem BioAssay, XGBoost | **terminée** |
 | 3 | Biologie des systèmes (modèle ODE d'une voie de signalisation) | Tellurium | **terminée** |
 | 4 | Base de données interne (gènes ↔ molécules ↔ voies ↔ sous-types) | SQLite, GDSC | **terminée** |
-| 5 | Assemblage (dashboard Streamlit) + veille bibliographique | Streamlit, HuggingFace Spaces | **dashboard en ligne** |
+| 5 | Assemblage (dashboard Streamlit) + [veille bibliographique](docs/veille/) | Streamlit, HuggingFace Spaces | **terminée** |
 
 ## Phase 2 — Chémoinformatique
 
@@ -77,5 +79,7 @@ molprint/
 ├── notebooks/         # notebooks d'exploration, un par étape
 ├── src/               # fonctions réutilisables (extraites des notebooks)
 ├── models/            # modèles entraînés (non versionnés)
-└── docs/              # fiches de veille bibliographique
+└── docs/
+    ├── GUIDE_COMPLET.md   # guide pédagogique complet + audit technique
+    └── veille/            # fiches de veille bibliographique, une par phase
 ```

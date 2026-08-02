@@ -46,13 +46,86 @@ Chaque brique s'appuie sur des **données publiques réelles** (PubChem, NCBI, G
 
 Avant d'entrer dans le projet, quelques notions qui reviennent partout.
 
-### Python
+### Python, pas à pas
 
-Python est un langage de programmation — une façon d'écrire des instructions qu'un ordinateur exécute dans l'ordre, de haut en bas. Une analogie : c'est une recette de cuisine très précise, où chaque ligne est une étape ("prends 2 œufs", "bats-les"), sauf qu'ici les "ingrédients" sont des nombres, du texte, ou des tableaux de données.
+Python est un langage de programmation — une façon d'écrire des instructions qu'un ordinateur exécute dans l'ordre, de haut en bas. Une analogie : c'est une recette de cuisine très précise, où chaque ligne est une étape ("prends 2 œufs", "bats-les"), sauf qu'ici les "ingrédients" sont des nombres, du texte, ou des tableaux de données. Comme pour le SQL en section 8, voici les briques de base, une par une, avec de vrais bouts de code du projet.
 
-Deux briques Python reviennent partout dans ce projet :
-- **pandas** : une bibliothèque pour manipuler des tableaux (comme Excel, mais en code — un `DataFrame` est un tableau avec des lignes et des colonnes nommées).
-- **une fonction** : un bout de recette réutilisable. `def compute_descriptors(smiles):` veut dire "voici une recette qui prend un SMILES en entrée et qui rend un résultat" — on peut l'appeler autant de fois qu'on veut sans réécrire le code.
+**Étape 1 — Variables et types.** Une variable, c'est une étiquette collée sur une valeur, pour pouvoir la réutiliser sans la retaper :
+```python
+gene_id = 2064          # un entier (int)
+gene_symbol = "ERBB2"   # du texte (str) — entre guillemets
+gc_percent = 58.23       # un nombre à virgule (float)
+is_active = True         # un booléen : vrai ou faux
+```
+
+**Étape 2 — Listes et dictionnaires.** Une **liste** (`[...]`) est une collection ordonnée, comme une liste de courses :
+```python
+GENES = ["ESR1", "ERBB2", "FOXA1", "AR", "GATA3"]
+GENES[1]  # -> "ERBB2" (Python compte à partir de 0, donc l'indice 1 = le 2e élément)
+```
+Un **dictionnaire** (`{...}`) associe des clés à des valeurs, comme une fiche d'identité :
+```python
+known_drugs = {
+    "lapatinib": "CS(=O)(=O)CCNCC1=CC=C(O1)...",
+    "tucatinib": "CC1=C(C=CC(=C1)NC2=NC=NC3=C2...",
+}
+known_drugs["lapatinib"]  # -> le SMILES du lapatinib
+```
+
+**Étape 3 — Les boucles (`for`).** Répéter une action pour chaque élément d'une liste, sans la réécrire à la main :
+```python
+for smi in df["canonical_smiles"]:
+    mol = Chem.MolFromSmiles(smi)   # exécuté une fois par molécule du tableau
+```
+Utilisé dans quasiment tous les notebooks pour traiter les 1070 molécules une par une.
+
+**Étape 4 — Les conditions (`if` / `elif` / `else`).** Un aiguillage : selon la situation, on ne fait pas la même chose. Exemple réel (`dashboard/streamlit_app.py`) :
+```python
+def applicability_domain(similarity):
+    if similarity >= 0.6:
+        return "proche du train (fiable)"
+    elif similarity >= 0.35:
+        return "modérément nouveau"
+    else:
+        return "extrapolation (prudence)"
+```
+
+**Étape 5 — Les fonctions.** Une recette réutilisable : on lui donne des ingrédients (les *paramètres*), elle rend un résultat, sans qu'on ait à réécrire les étapes à chaque fois :
+```python
+def compute_descriptors(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return None
+    return {"molecular_weight": Descriptors.MolWt(mol), ...}
+
+compute_descriptors("CC(=O)OC1=CC=CC=C1C(=O)O")  # appel de la fonction sur l'aspirine
+```
+
+**Étape 6 — Les compréhensions de liste.** Une façon compacte d'écrire "fabrique une liste en appliquant une action à chaque élément d'une autre liste" — un raccourci pour une boucle qui construit une liste :
+```python
+# Version boucle classique
+fps = []
+for smi in df["canonical_smiles"]:
+    fps.append(morgan_gen.GetFingerprint(Chem.MolFromSmiles(smi)))
+
+# Même résultat, en compréhension de liste (utilisé partout dans le projet)
+fps = [morgan_gen.GetFingerprint(Chem.MolFromSmiles(smi)) for smi in df["canonical_smiles"]]
+```
+
+**Étape 7 — Bibliothèques et objets.** Une bibliothèque (`import ...`) est un ensemble d'outils déjà écrits par d'autres, qu'on emprunte plutôt que de tout réécrire soi-même :
+```python
+import pandas as pd          # manipulation de tableaux (comme Excel en code)
+from rdkit import Chem       # chimie moléculaire
+import xgboost                # machine learning
+```
+`mol = Chem.MolFromSmiles(smiles)` crée un **objet** — une valeur qui a ses propres actions ("méthodes") attachées, comme `mol.GetNumAtoms()` (compter les atomes) ou `Descriptors.MolWt(mol)` (calculer son poids) : au lieu d'une simple donnée, `mol` "sait" répondre à des questions sur lui-même.
+
+**Le DataFrame pandas**, la structure la plus utilisée du projet : un tableau avec des lignes et des colonnes nommées (l'équivalent code d'une feuille Excel) :
+```python
+df = pd.read_csv("../data/raw/erbb2_activities.csv")   # charge le CSV en tableau
+df["active"].value_counts()                             # compte les valeurs d'une colonne
+df[df["active"] == 1]                                    # filtre les lignes où active vaut 1
+```
 
 ### Un notebook Jupyter (`.ipynb`)
 
@@ -150,6 +223,8 @@ print(residue)  # -> 'Y'
 
 Résultat : **la position 537 est bien une tyrosine**. On a ensuite simulé la mutation (remplacer artificiellement Y par S dans la séquence) et recalculé les propriétés physico-chimiques avant/après — un petit exercice qui illustre le principe, même si une vraie évaluation d'impact fonctionnel demanderait une structure 3D de la protéine (hors scope ici).
 
+📖 **Veille bibliographique** : [`docs/veille/phase1_biopython.md`](veille/phase1_biopython.md) — les publications derrière la mutation Y537S et la méthodologie RefSeq.
+
 ---
 
 ## 4. Phase 2 — Chémoinformatique : prédire si une molécule est un médicament
@@ -237,6 +312,8 @@ Le modèle combiné gagne, et devient le **modèle final** utilisé partout en a
 - **Le résultat le plus important** : **les molécules actives sont en moyenne 44% plus lourdes que les inactives** (533,5 vs 370,5 g/mol), avec plus d'atomes lourds, plus de cycles, un LogP plus élevé. Un écart massif, pas du bruit.
 
 **Pourquoi c'est important** : ça complète directement le constat du bit d'empreinte dominant (section 6, motif aminopyrimidine/quinazoline) — une partie de la performance du modèle vient probablement de sa capacité à reconnaître des molécules *grosses et complexes de type inhibiteur de kinase*, pas uniquement une reconnaissance fine et sélective de HER2. Le test de permutation (section 6) confirme qu'il n'y a pas de fuite de données — mais cette EDA a posteriori montre bien *pourquoi* la tâche était plus facile qu'elle n'en avait l'air au premier abord.
+
+📖 **Veille bibliographique** : [`docs/veille/phase2_chemoinformatique.md`](veille/phase2_chemoinformatique.md) — Lipinski, empreintes de Morgan, BRICS, split par squelette, résistance PIK3CA.
 
 ---
 
@@ -392,6 +469,8 @@ On simule ça avec un paramètre `basal_pi3k` (une activation de PI3K qui ne dé
 
 Le notebook inclut aussi un **simulateur générique** (`compare_blockade(node)`) pour choisir quel nœud bloquer (HER2, PI3K ou AKT) et voir l'effet, et une **courbe dose-réponse** (intensité du blocage vs niveau d'AKT final) — le pendant "biologie des systèmes" de la courbe dose-réponse pharmacologique de la Phase 2.
 
+📖 **Veille bibliographique** : [`docs/veille/phase3_biologie_systemes.md`](veille/phase3_biologie_systemes.md) — la voie HER2/PI3K/AKT, la modélisation ODE, l'outil Tellurium.
+
 ---
 
 ## 8. Phase 4 — SQL pour les nuls, par étapes
@@ -487,6 +566,8 @@ WHERE r.DRUG_NAME = 'Lapatinib' GROUP BY c.subtype
 *(ln(IC50) plus bas = concentration nécessaire plus faible = molécule plus puissante)*
 
 **Pourquoi c'est le résultat le plus important du projet** : ces chiffres viennent de mesures de laboratoire réelles, obtenues par une équipe totalement indépendante, sur des données que **ni le modèle QSAR (Phase 2) ni le modèle ODE (Phase 3) n'ont jamais vues**. Le lapatinib est ~10 fois plus puissant sur les lignées HER2-enrichi que sur les autres sous-types — exactement ce que prédisent nos deux modèles construits séparément (le QSAR le score très haut sur cible HER2, le modèle ODE montre que bloquer HER2 éteint toute la cascade). C'est une **validation croisée honnête**, pas un artefact circulaire de nos propres hypothèses.
+
+📖 **Veille bibliographique** : [`docs/veille/phase4_base_donnees.md`](veille/phase4_base_donnees.md) — GDSC, classification moléculaire des lignées cellulaires, sensibilité au lapatinib.
 
 ---
 
