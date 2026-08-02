@@ -1,0 +1,6 @@
+gene,accession,description,mrna_length,mrna_gc_percent,cds_length_nt,protein_length_aa,protein_mw_kda,instability_index,aromaticity,isoelectric_point
+ESR1,NM_001122740,"Homo sapiens estrogen receptor 1 (ESR1), transcript variant 2, mRNA",6480,46.64,1788,595,66.22,45.88,0.072,8.3
+ERBB2,NM_001005862,"Homo sapiens erb-b2 receptor tyrosine kinase 2 (ERBB2), transcript variant 2, mRNA",4858,58.23,3678,1225,134.85,56.63,0.069,5.61
+FOXA1,NM_004496,"Homo sapiens forkhead box A1 (FOXA1), mRNA",3509,50.44,1419,472,49.15,55.56,0.076,8.93
+AR,NM_000044,"Homo sapiens androgen receptor (AR), transcript variant 1, mRNA",10667,48.06,2763,920,99.19,56.78,0.075,6.01
+GATA3,NM_001002295,"Homo sapiens GATA binding protein 3 (GATA3), transcript variant 1, mRNA",3083,53.71,1335,444,48.04,64.56,0.065,9.47

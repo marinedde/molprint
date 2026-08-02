@@ -1,5 +1,7 @@
 # MolPrint
 
+**[🧪 Dashboard live](https://huggingface.co/spaces/marinedde/molprint-dashboard)** — cribler une molécule, explorer les candidats sélectionnés, voir les gènes analysés et la validation méthodologique.
+
 Projet in silico de prédiction de réponse aux médicaments, construit en complément d'[OncoPrint](https://github.com/marinedde/cdsd-certification/tree/main/bloc6-direction-projet/oncoprint) (classification moléculaire des sous-types de cancer du sein, TCGA-BRCA, XGBoost + SHAP).
 
 Objectif : couvrir les compétences bioinformatique/chémoinformatique/biologie des systèmes demandées sur les postes Data Scientist Préclinique en R&D pharmaceutique (cible marché : Suisse, Bâle).
@@ -12,7 +14,7 @@ Objectif : couvrir les compétences bioinformatique/chémoinformatique/biologie 
 | 2 | Chémoinformatique (screening in silico, QSAR) | RDKit, PubChem BioAssay, XGBoost | **terminée** |
 | 3 | Biologie des systèmes (modèle ODE d'une voie de signalisation) | Tellurium / PySB | à venir |
 | 4 | Base de données interne (patientes ↔ gènes ↔ molécules ↔ voies) | SQLite | à venir |
-| 5 | Assemblage (dashboard Streamlit) + veille bibliographique | - | à venir |
+| 5 | Assemblage (dashboard Streamlit) + veille bibliographique | Streamlit, HuggingFace Spaces | **dashboard en ligne** |
 
 ## Phase 2 — Chémoinformatique
 
@@ -22,7 +24,9 @@ Cible thérapeutique : **HER2/ERBB2** (choisie car elle relie directement au sou
 2. `notebooks/02_rdkit_descriptors_qsar.ipynb` — calcul des descripteurs moléculaires (RDKit, règles de Lipinski) et modèle QSAR (XGBoost + SHAP) prédisant l'activité d'une molécule à partir de sa structure
 3. `notebooks/03_virtual_screening_optimization.ipynb` — criblage virtuel et optimisation in silico : validation du modèle sur 5 médicaments anti-HER2 approuvés (probabilité prédite cohérente avec leur statut d'inhibiteurs connus), génération de nouveaux candidats par recombinaison de fragments (BRICS) à partir des molécules les plus actives, filtre de diversité structurale (clustering Butina sur empreintes de Morgan) et sélection d'un top 15
 4. `notebooks/04_fingerprint_qsar.ipynb` — comparaison en validation croisée de trois représentations moléculaires (descripteurs seuls, empreintes de Morgan seules, combinaison des deux) ; le modèle combiné (ROC AUC 0,98) devient le modèle final, nettement plus fiable sur les médicaments de référence que le modèle à descripteurs seuls
-5. `notebooks/06_scaffold_validation_applicability_domain.ipynb` — **rigueur méthodologique** : le split aléatoire (ROC AUC 0,98) est optimiste car le jeu de données contient beaucoup d'analogues proches (499 squelettes chimiques pour 1070 molécules). Un split par squelette de Bemis-Murcko (méthode standard du domaine, type MoleculeNet) donne un ROC AUC honnête de 0,91 sur des squelettes jamais vus (rappel actif 0,59) — et un contrôle de domaine d'applicabilité (similarité de Tanimoto au train) montre que les candidats générés en notebook 03 restent dans une zone \"modérément nouvelle\", donc leurs scores sont des pistes à explorer plutôt que des prédictions fiables\n\n## Phase 1 — Séquences ARN/ADN
+5. `notebooks/06_scaffold_validation_applicability_domain.ipynb` — **rigueur méthodologique** : le split aléatoire (ROC AUC 0,98) est optimiste car le jeu de données contient beaucoup d'analogues proches (499 squelettes chimiques pour 1070 molécules). Un split par squelette de Bemis-Murcko (méthode standard du domaine, type MoleculeNet) donne un ROC AUC honnête de 0,91 sur des squelettes jamais vus (rappel actif 0,59) — et un contrôle de domaine d'applicabilité (similarité de Tanimoto au train) montre que les candidats générés en notebook 03 restent dans une zone "modérément nouvelle", donc leurs scores sont des pistes à explorer plutôt que des prédictions fiables
+
+## Phase 1 — Séquences ARN/ADN
 
 Gènes choisis : les 5 features les plus importantes en SHAP dans OncoPrint, un par sous-type de cancer du sein (ESR1, ERBB2, FOXA1, AR, GATA3) — ancrage direct sur les résultats déjà produits plutôt que des gènes choisis arbitrairement.
 

@@ -9,4 +9,6 @@ data/processed/*.csv
 !data/processed/.gitkeep
 *.pkl
 *.joblib
+!dashboard/data/*.csv
+!dashboard/models/*.pkl
 .env
