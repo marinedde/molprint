@@ -10,6 +10,7 @@ Ce document explique **tout** le projet MolPrint, du premier notebook au dashboa
 
 1. [Le projet en 2 minutes](#1-le-projet-en-2-minutes)
 2. [Les briques de base expliquées simplement](#2-les-briques-de-base-expliquées-simplement)
+   - [Le vocabulaire exact de la fiche de poste, expliqué en profondeur](#le-vocabulaire-exact-de-la-fiche-de-poste-expliqué-en-profondeur)
 3. [Phase 1 — Biopython : lire l'ADN comme un livre](#3-phase-1--biopython--lire-ladn-comme-un-livre)
 4. [Phase 2 — Chémoinformatique : prédire si une molécule est un médicament](#4-phase-2--chémoinformatique--prédire-si-une-molécule-est-un-médicament)
 5. [Le Machine Learning en détail — et pourquoi XGBoost](#5-le-machine-learning-en-détail--et-pourquoi-xgboost)
@@ -146,6 +147,82 @@ Une base de données, c'est un ensemble de tableaux liés entre eux (comme plusi
 ### Déploiement / dashboard
 
 "Déployer" veut dire faire tourner ton code en continu sur un serveur accessible par internet, avec une interface visuelle (boutons, tableaux, graphiques) au lieu d'un notebook que toi seule sais lancer. Détail en [section 9](#9-phase-5--du-notebook-au-site-web--comment-ça-se-déploie).
+
+---
+
+## Le vocabulaire exact de la fiche de poste, expliqué en profondeur
+
+Cette section reprend, une par une, les notions techniques listées dans une fiche de poste type "Data Scientist / Bioinformaticien(ne) — Préclinique" (AIXIAL Group). L'idée : que tu puisses expliquer chacune de ces notions avec ta propre analogie en entretien, pas juste la reconnaître.
+
+### Bioinformatique et sciences computationnelles
+
+La bioinformatique, c'est le métier de **traducteur entre deux langues** : celle de la biologie (des molécules, des gènes, des séquences — le langage du vivant) et celle de l'informatique (du code, des algorithmes, des statistiques). Une découverte biologique brute (un gène séquencé, une protéine identifiée) ne sert à rien tant que personne ne sait la traiter à grande échelle, la comparer, la prédire — c'est le rôle du bioinformaticien.
+
+"Sciences computationnelles" est le terme plus large : utiliser le calcul informatique pour comprendre un phénomène qu'on ne peut pas (ou plus difficilement) étudier autrement — ça existe aussi en physique ("physique computationnelle"), en chimie (la chémoinformatique, plus bas), en climatologie... La bioinformatique en est la branche appliquée au vivant.
+
+**Dans MolPrint** : la Phase 1 tout entière (récupérer une séquence NCBI, la traduire, en extraire des propriétés) est un exercice de bioinformatique au sens strict.
+
+### Drug discovery (découverte de médicaments) et le sens de "préclinique"
+
+Le développement d'un médicament suit un parcours en étapes, généralement dans cet ordre :
+
+1. **Identification de la cible** (*target identification*) — quelle protéine/gène, si on la bloque ou l'active, changerait le cours de la maladie ? (dans MolPrint : ERBB2/HER2, hérité d'OncoPrint)
+2. **Découverte de "hits"** (*hit discovery*) — cribler un grand nombre de molécules pour trouver les premières pistes qui touchent la cible (Phase 2, notebooks 01-02)
+3. **Optimisation de "lead"** (*lead optimization*) — améliorer les meilleures pistes (Phase 2, notebook 03, criblage virtuel BRICS)
+4. **Préclinique** — tous les tests *avant* d'administrer quoi que ce soit à un humain : in silico (sur ordinateur), in vitro (en éprouvette/culture cellulaire, ex. les données GDSC de la Phase 4), in vivo chez l'animal
+5. **Clinique** — essais chez l'humain (phases I, II, III), hors du périmètre de ce projet
+
+**Analogie** : chercher un médicament, c'est chercher une aiguille (la bonne molécule) dans une botte de foin absolument gigantesque — le nombre de molécules "chimiquement possibles" est estimé à plus de 10⁶⁰, largement plus que d'atomes dans le système solaire. Personne ne peut synthétiser et tester ça physiquement un par un : d'où l'intérêt du criblage *in silico* pour présélectionner avant de synthétiser.
+
+**Dans MolPrint** : le projet couvre les étapes 1 à 4 (identification de cible via OncoPrint, hit discovery via PubChem, lead optimization via BRICS, et Phase 4 qui touche à des données de type préclinique via GDSC) — jamais la clinique, cohérent avec le mot "préclinique" du titre du poste.
+
+### IA, Machine Learning, Deep Learning : les poupées russes
+
+Ces trois termes s'emboîtent les uns dans les autres, du plus large au plus étroit :
+
+- **Intelligence artificielle (IA)** : le domaine le plus large — faire faire à une machine une tâche qui semblerait demander de l'intelligence humaine. Ça inclut des méthodes très différentes, y compris de simples règles écrites à la main ("si température > 38°C, alors fièvre").
+- **Machine Learning (ML)**, une branche de l'IA : la machine *apprend* la règle à partir d'exemples, plutôt qu'on la lui écrive (voir la définition détaillée un peu plus haut).
+- **Deep Learning**, une branche du ML : utilise des réseaux de neurones à de nombreuses couches — la technique derrière la reconnaissance d'image, la traduction automatique, ou les grands modèles de langage (LLM) comme celui qui a écrit une bonne partie du code de ce projet.
+
+**Dans MolPrint**, le modèle QSAR (XGBoost) est du Machine Learning "classique" — pas du deep learning. Ce n'est pas un hasard ni une limite technique : avec ~1000 molécules, un réseau de neurones profond n'aurait pas assez d'exemples pour apprendre quoi que ce soit de fiable (il "apprendrait le bruit" plutôt que le signal — voir la section overfitting). XGBoost, sur ce volume de données, reste l'outil le plus adapté (voir section 5 pour le détail complet du choix).
+
+### Modélisation prédictive appliquée à la biologie
+
+C'est le nom générique de ce que fait le modèle QSAR de la Phase 2 : construire un modèle statistique qui **prédit** un résultat biologique (ici : "cette molécule sera-t-elle active sur HER2 ?") à partir de données déjà connues.
+
+**Analogie** : un modèle de prévision météo ne "sait" pas ce qu'il va se passer demain — il a appris, à partir de dizaines d'années de données passées, la relation statistique entre les conditions d'aujourd'hui et le temps de demain. Le modèle QSAR fait pareil : il a appris, à partir de 1070 molécules déjà testées en laboratoire, la relation statistique entre la structure d'une molécule et son activité — puis il applique cette relation à une molécule qu'il n'a jamais vue.
+
+### Biologie des systèmes et modélisation mathématique
+
+La biologie "classique" (dite *réductionniste*) étudie souvent un gène ou une protéine à la fois, isolément. La **biologie des systèmes** part du principe que le comportement d'une cellule émerge de l'*interaction* de nombreux composants en réseau — un peu comme comprendre le trafic d'une ville ne se résume pas à comprendre une seule voiture, mais comment toutes les voitures interagissent (feux rouges, embouteillages, itinéraires alternatifs).
+
+La **modélisation mathématique**, l'outil de la biologie des systèmes, consiste à traduire ces interactions en équations qu'on peut simuler. **Analogie** : un simulateur de vol ne remplace pas un vrai avion, mais il permet de tester des scénarios ("que se passe-t-il si je coupe un moteur ?") sans risque et à volonté, avant — ou à la place — d'un vrai test coûteux et dangereux. Un modèle biologique bien construit permet la même chose : tester "que se passe-t-il si on bloque cette protéine ?" en quelques secondes de calcul plutôt qu'en semaines de laboratoire — à condition de rester conscient que ce n'est qu'une simulation, à valider un jour contre de vraies données (ce que fait la Phase 4 avec GDSC).
+
+**Dans MolPrint** : la Phase 3 entière — la cascade HER2 → PI3K → AKT modélisée par équations différentielles, avec la simulation du blocage et de la résistance PIK3CA (voir section 7 pour le détail).
+
+### Conception de médicaments *in silico*
+
+"*In silico*" est un pseudo-latin moderne (construit sur le modèle de *in vivo* = dans l'organisme vivant, et *in vitro* = dans le verre du laboratoire) qui veut dire "sur ordinateur, en silicium". Concevoir un médicament *in silico*, c'est utiliser le calcul pour designer, filtrer ou optimiser des candidats-médicaments **avant** de synthétiser quoi que ce soit physiquement.
+
+**Analogie** : un architecte teste aujourd'hui la résistance, la lumière et le coût d'un bâtiment dans un logiciel de modélisation 3D avant de couler le premier béton — ça permet de repérer les problèmes et d'itérer sur le plan gratuitement, puis de ne construire (physiquement) que la version déjà optimisée. La conception *in silico* de médicaments fait la même chose avec des molécules : tester virtuellement des milliers de candidats en quelques minutes, ne synthétiser en vrai que la poignée la plus prometteuse.
+
+**Dans MolPrint** : c'est très précisément ce que fait le notebook 03 — générer virtuellement 3000 candidats (BRICS), les évaluer virtuellement (modèle QSAR), n'en retenir que 15, sans jamais rien synthétiser physiquement.
+
+### Le lien entre bioinformatique et chémoinformatique
+
+Deux disciplines voisines mais distinctes : la **bioinformatique** manipule des données *biologiques* (gènes, protéines, séquences — le "problème"). La **chémoinformatique** manipule des données *chimiques* (molécules, structures — la "solution" potentielle). Faire le lien entre les deux, c'est savoir passer de "quel gène/quelle protéine est en cause dans cette maladie" à "quelle molécule pourrait agir dessus".
+
+**Analogie** : la bioinformatique identifie la forme de la serrure (la cible biologique) ; la chémoinformatique dessine et teste des clés (des molécules) qui pourraient l'ouvrir. Faire le lien entre les deux, c'est être capable de passer de la forme de la serrure à la forme de clé à essayer — pas juste savoir manipuler l'une ou l'autre isolément.
+
+**Dans MolPrint**, ce lien n'est pas juste une idée — il est **concret et interrogeable** : la Phase 4 relie explicitement, dans la table `subtypes`, un gène issu de la bioinformatique (ex. `ERBB2`, trouvé important en Phase 1/OncoPrint) aux molécules candidates issues de la chémoinformatique (table `molecules`, Phase 2) qui ciblent ce même gène — une requête SQL suffit pour naviguer de l'un à l'autre (voir section 8).
+
+### Pipelines de prétraitement et de traitement des données
+
+Des données brutes, telles qu'elles arrivent (d'une API, d'un fichier téléchargé), sont presque toujours inutilisables directement : valeurs manquantes, doublons, formats incohérents, erreurs de saisie. Un **pipeline de prétraitement** est une suite d'étapes fixes et reproductibles qui transforme ces données brutes en quelque chose d'utilisable — chaque étape retire un type précis d'impureté.
+
+**Analogie** : une station de traitement de l'eau. L'eau brute (les données brutes) traverse plusieurs bassins de filtration successifs, chacun ciblant un type d'impureté différent (sédiments, bactéries, produits chimiques), avant d'être considérée potable (utilisable). Sauter une étape (comme le bug du `dropna()` trouvé et corrigé dans le notebook 02, section 4) revient à laisser passer une impureté précise — ici, un déséquilibre de classe silencieux.
+
+**Dans MolPrint**, chaque notebook contient un pipeline de ce type : notebook 01 (déduplication des molécules par CID, agrégation des essais multiples), notebook 02 (calcul des descripteurs, filtrage des lignes incomplètes), notebook 09 (détection d'outliers) — autant d'étapes de filtration, documentées et reproductibles (`jupyter nbconvert --execute` rejoue tout le pipeline de bout en bout, voir section 10).
 
 ---
 
