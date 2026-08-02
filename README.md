@@ -13,7 +13,7 @@ Objectif : couvrir les compétences bioinformatique/chémoinformatique/biologie 
 | 1 | Séquences ARN/ADN | Biopython | **terminée** |
 | 2 | Chémoinformatique (screening in silico, QSAR) | RDKit, PubChem BioAssay, XGBoost | **terminée** |
 | 3 | Biologie des systèmes (modèle ODE d'une voie de signalisation) | Tellurium | **terminée** |
-| 4 | Base de données interne (patientes ↔ gènes ↔ molécules ↔ voies) | SQLite | à venir |
+| 4 | Base de données interne (gènes ↔ molécules ↔ voies ↔ sous-types) | SQLite, GDSC | **terminée** |
 | 5 | Assemblage (dashboard Streamlit) + veille bibliographique | Streamlit, HuggingFace Spaces | **dashboard en ligne** |
 
 ## Phase 2 — Chémoinformatique
@@ -25,6 +25,16 @@ Cible thérapeutique : **HER2/ERBB2** (choisie car elle relie directement au sou
 3. `notebooks/03_virtual_screening_optimization.ipynb` — criblage virtuel et optimisation in silico : validation du modèle sur 5 médicaments anti-HER2 approuvés (probabilité prédite cohérente avec leur statut d'inhibiteurs connus), génération de nouveaux candidats par recombinaison de fragments (BRICS) à partir des molécules les plus actives, filtre de diversité structurale (clustering Butina sur empreintes de Morgan) et sélection d'un top 15
 4. `notebooks/04_fingerprint_qsar.ipynb` — comparaison en validation croisée de trois représentations moléculaires (descripteurs seuls, empreintes de Morgan seules, combinaison des deux) ; le modèle combiné (ROC AUC 0,98) devient le modèle final, nettement plus fiable sur les médicaments de référence que le modèle à descripteurs seuls
 5. `notebooks/06_scaffold_validation_applicability_domain.ipynb` — **rigueur méthodologique** : le split aléatoire (ROC AUC 0,98) est optimiste car le jeu de données contient beaucoup d'analogues proches (499 squelettes chimiques pour 1070 molécules). Un split par squelette de Bemis-Murcko (méthode standard du domaine, type MoleculeNet) donne un ROC AUC honnête de 0,91 sur des squelettes jamais vus (rappel actif 0,59) — et un contrôle de domaine d'applicabilité (similarité de Tanimoto au train) montre que les candidats générés en notebook 03 restent dans une zone "modérément nouvelle", donc leurs scores sont des pistes à explorer plutôt que des prédictions fiables
+
+## Phase 4 — Base de données interne
+
+Relie dans une seule base SQLite (`data/processed/molprint.db`) les briques construites séparément : gènes (Phase 1), molécules candidates (Phase 2), voie de signalisation (Phase 3), et une source externe indépendante — **GDSC** (Genomics of Drug Sensitivity in Cancer, Sanger Institute), qui mesure la sensibilité réelle en laboratoire de 51 lignées cellulaires de cancer du sein à des centaines de médicaments.
+
+`notebooks/08_internal_database.ipynb` :
+- 7 tables : `genes`, `subtypes`, `pathways`, `pathway_genes`, `molecules`, `cell_lines`, `drug_response`
+- Annotation des 51 lignées GDSC par sous-type moléculaire (classification manuelle issue de la littérature — Neve et al. 2006, Kao et al. 2009 — volontairement incomplète : les lignées non documentées restent "Non classé" plutôt que d'être devinées)
+- Requête roadmap : *"pour un sous-type donné, quels gènes clés, quelles molécules candidates, quelle voie de signalisation ?"*
+- **Validation empirique indépendante** : les données GDSC (réelles, sans lien avec nos modèles) confirment que le lapatinib est ~10x plus puissant sur les lignées HER2-enrichi (IC50 moyen ≈ 1,8 µM) que sur Luminal A ou Triple Négatif (≈ 17-21 µM) — cohérent avec les hypothèses des Phases 2 et 3
 
 ## Phase 3 — Biologie des systèmes
 

@@ -12,3 +12,4 @@ ipykernel
 biopython
 certifi
 tellurium
+requests
